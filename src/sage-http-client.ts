@@ -124,6 +124,7 @@ export class SageRequestClient {
         } else {
           if (this._spy !== undefined) {
             this._spy.reportHTTPRequest()
+            this._spy.reportHTTPTransferSize(Buffer.byteLength(JSON.stringify(body), 'utf8'))
             this._spy.reportImportTime(body.stats.import)
             this._spy.reportExportTime(body.stats.export)
             this._spy.reportOverhead(body.stats.import + body.stats.export)

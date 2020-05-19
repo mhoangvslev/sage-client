@@ -30,6 +30,7 @@ SOFTWARE.
  */
 export default class Spy {
   private _nbHttpCalls: number
+  private _transferSize: number
   private _nbResults: number
   private _responseTimes: Array<number>
   private _overheads: Array<number>
@@ -39,6 +40,7 @@ export default class Spy {
 
   constructor () {
     this._nbHttpCalls = 0
+    this._transferSize = 0
     this._nbResults = 0
     this._responseTimes = []
     this._overheads = []
@@ -49,6 +51,10 @@ export default class Spy {
 
   get nbHTTPCalls (): number {
     return this._nbHttpCalls
+  }
+
+  get transferSize () {
+    return this._transferSize
   }
 
   get nbResults (): number {
@@ -77,6 +83,10 @@ export default class Spy {
 
   reportHTTPRequest (count = 1): void {
     this._nbHttpCalls += count
+  }
+
+  reportHTTPTransferSize (bytes: number) {
+    this._transferSize += bytes
   }
 
   reportHTTPError (err: Error) {
