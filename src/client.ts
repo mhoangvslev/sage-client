@@ -24,7 +24,7 @@ SOFTWARE.
 
 'use strict'
 
-import { HashMapDataset, PlanBuilder, Pipeline, stages } from 'sparql-engine'
+import { HashMapDataset, PlanBuilder, Pipeline, PipelineStage, QueryOutput, Consumable } from 'sparql-engine'
 import SageGraph from './sage-graph'
 import Spy from './spy'
 
@@ -89,7 +89,7 @@ export default class SageClient {
    * @param  query - SPARQL query to evaluate
    * @return An iterator used to evaluates the query
    */
-  execute (query: string) {
+  execute (query: string): PipelineStage<QueryOutput> | Consumable {
     this._graph.open()
     const pipeline: any = this._builder.build(query)
     return Pipeline.getInstance().finalize(pipeline, () => this._graph.close())
