@@ -65,3 +65,20 @@ export function formatManyBGPQuery (generator: Generator, bgps: Array<Algebra.Tr
   }
   return generator.stringify(jsonQuery)
 }
+
+/**
+ * Create a SPARQL query (in string format) from a set of Basic Graph Patterns, Filters and Binds
+ * @param  variables - Set of variables to project
+ * @param  nodes - Set of Basic Graph Patterns (i.e., a set of set of triple patterns), Filters and Binds
+ * @return A SPARQL query
+ */
+export function formatManyBGPWithFiltersAndBindsQuery (generator: Generator, variables: Array<string> | undefined, prefixes: any, nodes: Array<Algebra.BGPNode|Algebra.BindNode|Algebra.FilterNode|Algebra.GroupNode>): string {
+  const jsonQuery: Algebra.RootNode = {
+    type: 'query',
+    prefixes: prefixes,
+    variables: variables,
+    queryType: 'SELECT',
+    where: nodes
+  }
+  return generator.stringify(jsonQuery)
+}

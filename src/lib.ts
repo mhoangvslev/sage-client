@@ -26,4 +26,4 @@ SOFTWARE.
 
 export { default as Spy } from './spy'
 export { default as SageClient } from './client'
-export { default as SageGraph } from './sage-graph'
+export { default as DirectSageClient } from './direct-client'

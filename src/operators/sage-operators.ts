@@ -28,7 +28,7 @@ import { BindingBase, Pipeline } from 'sparql-engine'
 import { Bindings } from 'sparql-engine/dist/rdf/bindings'
 import { StreamPipelineInput, PipelineStage } from 'sparql-engine/dist/engine/pipeline/pipeline-engine'
 import { SageRequestClient, SageResponseBody } from '../sage-http-client'
-import { formatBGPQuery, formatManyBGPQuery } from './utils'
+import { formatBGPQuery, formatManyBGPQuery, formatManyBGPWithFiltersAndBindsQuery } from './utils'
 import { Algebra, Generator } from 'sparqljs'
 
 /**
@@ -87,6 +87,25 @@ export function SageBGPOperator (bgp: Algebra.TripleObject[], defaultGraph: stri
 export function SageManyBGPOperator (bgps: Array<Algebra.TripleObject[]>, defaultGraph: string, sageClient: SageRequestClient): PipelineStage<Bindings> {
   const generator = new Generator()
   const query = formatManyBGPQuery(generator, bgps)
+  return Pipeline.getInstance().fromAsync(input => {
+    querySage(query, defaultGraph, sageClient, input)
+      .then(() => input.complete())
+      .catch(err => input.error(err))
+  })
+}
+
+/**
+ * An operator used to evaluate a SPARQL query with a set of BGPs, Filters and Binds
+ * @author Julien AIMONIER-DAVAT
+ * @param variables - Set of variables to select
+ * @param prefixes - Prefixes used in the query
+ * @param nodes  - Set of BGPs, Filters and Binds to evaluate
+ * @param sageClient - HTTP client used to query a Sage server
+ * @return A stage of the pipeline which produces the query results
+ */
+export function SageManyBGPWithFiltersAndBindsOperator (variables: Array<string>, prefixes: any, nodes: Array<Algebra.BindNode|Algebra.BGPNode|Algebra.FilterNode|Algebra.GroupNode>, defaultGraph: string, sageClient: SageRequestClient): PipelineStage<Bindings> {
+  const generator = new Generator()
+  const query = formatManyBGPWithFiltersAndBindsQuery(generator, variables, prefixes, nodes)
   return Pipeline.getInstance().fromAsync(input => {
     querySage(query, defaultGraph, sageClient, input)
       .then(() => input.complete())

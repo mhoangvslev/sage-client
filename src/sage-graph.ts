@@ -30,7 +30,7 @@ import ExecutionContext from 'sparql-engine/dist/engine/context/execution-contex
 import { PipelineStage, PipelineInput } from 'sparql-engine/dist/engine/pipeline/pipeline-engine'
 import { Algebra } from 'sparqljs'
 import { SageRequestClient } from './sage-http-client'
-import { SageBGPOperator, SageManyBGPOperator } from './operators/sage-operators'
+import { SageBGPOperator, SageManyBGPOperator, SageManyBGPWithFiltersAndBindsOperator } from './operators/sage-operators'
 import Spy from './spy'
 
 /**
@@ -66,6 +66,10 @@ export default class SageGraph extends Graph {
 
   evalUnion (patterns: Array<Algebra.TripleObject[]>, options: ExecutionContext): PipelineStage<Bindings> {
     return SageManyBGPOperator(patterns, this._defaultGraph, this._httpClient)
+  }
+
+  evalQuery (variables: Array<string>, prefixes: any, nodes: Array<Algebra.BGPNode|Algebra.BindNode|Algebra.FilterNode|Algebra.GroupNode>, context: ExecutionContext): PipelineStage<Bindings> {
+    return SageManyBGPWithFiltersAndBindsOperator(variables, prefixes, nodes, this._defaultGraph, this._httpClient)
   }
 
   open () {
