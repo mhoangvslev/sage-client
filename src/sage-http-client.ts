@@ -57,6 +57,8 @@ export class SageRequestClient {
   private readonly _url: string
   private readonly _httpClient: request.RequestAPI<request.Request, request.CoreOptions, request.RequiredUriUrl>
   private readonly _spy: Spy | undefined
+  private readonly _retryDelay: number
+  private readonly _maxAttemps: number
   private _isClosed: boolean
 
   /**
@@ -75,6 +77,8 @@ export class SageRequestClient {
       gzip: true,
       time: true
     })
+    this._retryDelay = 1000
+    this._maxAttemps = 1000
     this._isClosed = false
   }
 
@@ -103,38 +107,64 @@ export class SageRequestClient {
     if (this._isClosed) {
       return Promise.resolve({ bindings: [], hasNext: false, next: null })
     }
+
     const queryBody: SageQueryBody = {
       query,
       defaultGraph,
       next
     }
+    const self = this
+
+    function attempt(): Promise<SageResponseBody> {
+      return new Promise((resolve, reject) => {
+        let requestBody: (request.UrlOptions & request.CoreOptions) = {
+          url: self._url,
+          body: queryBody
+        }
+        self._httpClient.post(requestBody, (err, res, body) => {
+          if (err || res.statusCode !== 200) {
+            if (err) {
+              reject(err)
+            } else {
+              reject(new Error(JSON.stringify(res.body)))
+            }
+          } else {
+            if (self._spy !== undefined) {
+              self._spy.reportHTTPRequest()
+              self._spy.reportHTTPTransferSize(Buffer.byteLength(JSON.stringify(body), 'utf8'))
+              self._spy.reportImportTime(body.stats.import)
+              self._spy.reportExportTime(body.stats.export)
+              self._spy.reportOverhead(body.stats.import + body.stats.export)
+              if (res !== undefined && res.timingPhases !== undefined) {
+                self._spy.reportHTTPResponseTime(res.timingPhases.firstByte)
+              }
+            }
+            resolve(body)
+          }
+        })
+      })
+    }
 
     return new Promise((resolve, reject) => {
-      let requestBody: (request.UrlOptions & request.CoreOptions) = {
-        url: this._url,
-        body: queryBody
-      }
-      this._httpClient.post(requestBody, (err, res, body) => {
-        if (err || res.statusCode !== 200) {
-          if (err) {
-            reject(err)
-          } else {
-            reject(new Error(JSON.stringify(res.body)))
-          }
-        } else {
-          if (this._spy !== undefined) {
-            this._spy.reportHTTPRequest()
-            this._spy.reportHTTPTransferSize(Buffer.byteLength(JSON.stringify(body), 'utf8'))
-            this._spy.reportImportTime(body.stats.import)
-            this._spy.reportExportTime(body.stats.export)
-            this._spy.reportOverhead(body.stats.import + body.stats.export)
-            if (res !== undefined && res.timingPhases !== undefined) {
-              this._spy.reportHTTPResponseTime(res.timingPhases.firstByte)
+      let counter = 0
+      const sendQueryWithRetryPolicy = function() {
+        if (counter < self._maxAttemps) {
+          counter++
+          attempt().then((res) => {
+            resolve(res)
+          }).catch((error) => {
+            if (error === 'Timeout') {
+              setTimeout(() => { console.log(`Number of attemps : ${counter}`); sendQueryWithRetryPolicy() }, self._retryDelay)
+            } else {
+              setTimeout(() => { console.log(`Number of attemps : ${counter}`); sendQueryWithRetryPolicy() }, self._retryDelay)
             }
-          }
-          resolve(body)
+          })
+        } else {
+          reject('Error: Maximum number of attemps reached !')
         }
-      })
+      }
+      sendQueryWithRetryPolicy()      
     })
+
   }
 }
