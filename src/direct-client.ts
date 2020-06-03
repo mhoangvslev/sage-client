@@ -75,44 +75,28 @@ export default class DirectSageClient {
     this._graph = new SageGraph(this._url, this._defaultGraph, this._spy)
   }
 
-  extractVariable(queryPlan: Algebra.RootNode): Array<string> {
-    let variables = new Array<string>()
-    if (!queryPlan.variables) {
-      variables.push('*')
-      return variables
-    }
-    for (let variable of queryPlan.variables) {
-      if (utils.isAggregation(variable)) {
-        throw new Error(`Aggregation are not supported`)
-      }
-      variables.push(variable)
-    }
-    return variables
-  }
-
-  extractNodes(queryPlan: Algebra.RootNode): Array<Algebra.BindNode|Algebra.BGPNode|Algebra.FilterNode|Algebra.GroupNode> {
-    let nodes = new Array<Algebra.BindNode|Algebra.BGPNode|Algebra.FilterNode|Algebra.GroupNode>()
-    for (let node of queryPlan.where) {
-      if (!(utils.isBGPNode(node) || utils.isBindNode(node) || utils.isFilterNode(node) || utils.isGroupNode(node))) {
-        throw new Error(`This operator is not supported: ${node.type}`)
-      }
-      nodes.push(node)
-    }
-    return nodes
-  }
-
   /**
    * Build an iterator used to evaluate a SPARQL query against a SaGe server
+   * Only BGP, Filter and Bind nodes are supported.
    * @param  query - SPARQL query to evaluate
    * @return An iterator used to evaluates the query
    */
   execute (query: string): PipelineStage<QueryOutput> | Consumable {
     this._graph.open()
     let queryPlan: Algebra.RootNode = new Parser().parse(query)
-    let variables: Array<string> = this.extractVariable(queryPlan)
-    let prefixes: any = queryPlan.prefixes
-    let nodes: Array<Algebra.BindNode|Algebra.BGPNode|Algebra.FilterNode|Algebra.GroupNode> = this.extractNodes(queryPlan)
-    const pipeline: any = this._graph.evalQuery(variables, prefixes, nodes, new ExecutionContext())
+    if (queryPlan.variables) {
+      for (let variable of queryPlan.variables) {
+        if (utils.isAggregation(variable)) {
+          throw new Error(`Aggregation are not supported`)
+        }
+      }
+    }
+    for (let node of queryPlan.where) {
+      if (!(utils.isBGPNode(node) || utils.isBindNode(node) || utils.isFilterNode(node) || utils.isGroupNode(node))) {
+        throw new Error(`This operator is not supported: ${node.type}`)
+      }
+    }
+    const pipeline: any = this._graph.evalQuery(queryPlan, new ExecutionContext())
     return Pipeline.getInstance().finalize(pipeline, () => this._graph.close())
   }
 }

@@ -46,7 +46,8 @@ export interface SageQueryBody {
 export interface SageResponseBody {
   bindings: string[],
   next: string | null,
-  hasNext: boolean
+  hasNext: boolean,
+  stats?: any
 }
 
 /**
