@@ -24,7 +24,7 @@ SOFTWARE.
 
 'use strict'
 
-import { Pipeline, PipelineStage, ExecutionContext, QueryOutput, Consumable } from 'sparql-engine'
+import { Pipeline, PipelineStage, ExecutionContext } from 'sparql-engine'
 import SageGraph from './sage-graph'
 import Spy from './spy'
 import { Parser, Algebra } from 'sparqljs'
@@ -81,7 +81,7 @@ export default class DirectSageClient {
    * @param  query - SPARQL query to evaluate
    * @return An iterator used to evaluates the query
    */
-  execute (query: string): PipelineStage<QueryOutput> | Consumable {
+  execute (query: string) {
     this._graph.open()
     let queryPlan: Algebra.RootNode = new Parser().parse(query)
     if (queryPlan.variables) {
