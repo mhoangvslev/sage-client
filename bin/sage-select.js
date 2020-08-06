@@ -4,8 +4,7 @@
 
 const fs = require('fs')
 const program = require('commander')
-const { Parser } = require('sparqljs')
-
+const Parser = require('sparqljs').Parser()
 const Spy = require('../dist/spy').default
 const { format_json } = require('./format_result')
 
@@ -25,7 +24,7 @@ program
   .parse(process.argv)
 
 if (program.args.length !== 2) {
-    process.stderr.write('Error: you must input exactly one server and one default graph IRI to use.\nSee rewrite_using_stats --help for more details.\n')
+    process.stderr.write('Error: you must input exactly one server and one default graph IRI to use.\nSee sage-select --help for more details.\n')
     process.exit(1)
 }
 
@@ -36,11 +35,16 @@ if (program.query) {
 } else if (program.file && fs.existsSync(program.file)) {
     query = fs.readFileSync(program.file, 'utf-8')
 } else {
-    process.stderr.write('Error: you must input a SPARQL query to evaluate.\nSee rewrite_using_stats --help for more details.\n')
+    process.stderr.write('Error: you must input a SPARQL query to evaluate.\nSee sage-select --help for more details.\n')
     process.exit(1)
 }
 
-let queryPlan = new Parser().parse(query)
+let queryPlan = new Parser.parse(query)
+if (queryPlan.queryType !== 'SELECT') {
+    process.stderr.write('Error: you must input a SELECT query.\nSee sage-select --help for more details.\n')
+    process.exit(1)
+}
+
 let bindings = []
 let spy = new Spy()
 let client = new SageClient(program.args[0], program.args[1], spy)
@@ -76,10 +80,10 @@ promise.then(function() {
     let time = endTime - startTime
 
     if (program.measure) {
-        fs.appendFileSync(program.measure, `${time},${spy.nbHTTPCalls},${spy.transferSize},${bindings.length},complete`)
+        fs.writeFileSync(program.measure, `${time},${spy.nbHTTPCalls},${spy.transferSize},${bindings.length},complete`)
     } 
     if (program.output) {
-        fs.appendFileSync(program.output, JSON.stringify(format_json(queryPlan.variables, bindings), null, 2))
+        fs.writeFileSync(program.output, JSON.stringify(format_json(queryPlan.variables, bindings), null, 2))
     }
 
     process.stdout.write(`SPARQL query evaluated in ${time / 1000}s with ${spy.nbHTTPCalls} HTTP request(s). ${Math.round(spy.transferSize / 1024)} KBytes transfered. ${bindings.length} results !\n`)
@@ -96,7 +100,7 @@ promise.then(function() {
     }
 
     if (program.measure) {
-        fs.appendFileSync(program.measure, `${time},${spy.nbHTTPCalls},${spy.transferSize},${bindings.length},${state}`)
+        fs.writeFileSync(program.measure, `${time},${spy.nbHTTPCalls},${spy.transferSize},${bindings.length},${state}`)
     }
     
     process.stdout.write(`${state === 'error' ? 'An error occured' : 'SPARQL query interrupted'} after ${time / 1000}s. ${spy.nbHTTPCalls} HTTP request(s) sent. ${Math.round(spy.transferSize / 1024)} KBytes transfered. ${bindings.length} results retrieved !\n`)
