@@ -71,7 +71,7 @@ export class SageRequestClient {
     this._url = url
     this._spy = spy
     // TODO check if this really enable http multi-sockets and speed up query exec.
-    request.forever({ timeout: 2000, minSockets: 10 }, null)
+    request.forever({ timeout: 1000, minSockets: 10 }, null)
     this._httpClient = request.defaults({
       method: 'POST',
       json: true,
@@ -105,17 +105,13 @@ export class SageRequestClient {
    * @return The HTTP response as sent by the SaGe server
    */
   query (query: string, defaultGraph: string, next: string | null = null): Promise<SageResponseBody> {
-    if (this._isClosed) {
-      return Promise.resolve({ bindings: [], hasNext: false, next: null })
-    }
-
+    const self = this
     const queryBody: SageQueryBody = {
       query,
       defaultGraph,
       next
     }
-    const self = this
-
+    
     function attempt(): Promise<SageResponseBody> {
       return new Promise((resolve, reject) => {
         let requestBody: (request.UrlOptions & request.CoreOptions) = {
@@ -129,14 +125,20 @@ export class SageRequestClient {
             } else {
               reject(new Error(JSON.stringify(res.body)))
             }
+          } else if (self._isClosed) {
+            if (self._spy) {
+              self._spy.reportQueryState('timeout')
+            }
+            resolve({ bindings: [], hasNext: false, next: null })
           } else {
-            if (self._spy !== undefined) {
+            if (self._spy) {
               self._spy.reportHTTPRequest()
+              self._spy.reportSolution(body.bindings.length)
               self._spy.reportHTTPTransferSize(Buffer.byteLength(JSON.stringify(body), 'utf8'))
               self._spy.reportImportTime(body.stats.import)
               self._spy.reportExportTime(body.stats.export)
               self._spy.reportOverhead(body.stats.import + body.stats.export)
-              if (res !== undefined && res.timingPhases !== undefined) {
+              if (res && res.timingPhases) {
                 self._spy.reportHTTPResponseTime(res.timingPhases.firstByte)
               }
             }
@@ -147,21 +149,25 @@ export class SageRequestClient {
     }
 
     return new Promise((resolve, reject) => {
-      let counter = 0
+      let counter = 1
       const sendQueryWithRetryPolicy = function() {
-        if (counter < self._maxAttemps) {
-          counter++
-          attempt().then((res) => {
-            resolve(res)
-          }).catch((error) => {
-            if (error === 'Timeout') {
-              setTimeout(() => { console.log(`Number of attemps : ${counter}`); sendQueryWithRetryPolicy() }, self._retryDelay)
-            } else {
-              setTimeout(() => { console.log(`Number of attemps : ${counter}`); sendQueryWithRetryPolicy() }, self._retryDelay)
-            }
-          })
+        if (self._isClosed) {
+          if (self._spy) {
+            self._spy.reportQueryState('timeout')
+          }
+          resolve({ bindings: [], hasNext: false, next: null })
+        } else if (counter > self._maxAttemps) {
+          if (self._spy) {
+            self._spy.reportQueryState('error')
+          }
+          reject('Error: maximum number of attemps reached')
         } else {
-          reject('Error: Maximum number of attemps reached !')
+          attempt().then((result) => {
+            resolve(result)
+          }).catch((error) => {
+            counter++
+            setTimeout(sendQueryWithRetryPolicy, self._retryDelay)
+          })
         }
       }
       sendQueryWithRetryPolicy()      

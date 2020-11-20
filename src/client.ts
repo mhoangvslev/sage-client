@@ -24,9 +24,10 @@ SOFTWARE.
 
 'use strict'
 
-import { HashMapDataset, PlanBuilder, Pipeline, PipelineStage, Graph } from 'sparql-engine'
+import { HashMapDataset, PlanBuilder, Pipeline } from 'sparql-engine'
 import SageGraph from './sage-graph'
 import Spy from './spy'
+import { clearTimeout } from 'timers'
 
 /**
  * A SageClient is used to evaluate SPARQL queries againt a SaGe server
@@ -63,7 +64,7 @@ export default class SageClient {
    * Constructor
    * @param {string} url - The url of the dataset to query
    */
-  constructor (url: string, defaultGraph: string, spy?: Spy) {
+  constructor (url: string, defaultGraph: string, spy?: Spy, options: any = {}) {
     this._url = url
     this._defaultGraph = defaultGraph
     this._spy = spy
@@ -81,7 +82,7 @@ export default class SageClient {
       const url = iri.substring(0, index + 7)
       return new SageGraph(url, iri, this._spy)
     })
-    this._builder = new PlanBuilder(this._dataset)
+    this._builder = new PlanBuilder(this._dataset, {}, options)
   }
 
   /**
@@ -89,7 +90,19 @@ export default class SageClient {
    * @param  query - SPARQL query to evaluate
    * @return An iterator used to evaluates the query
    */
-  execute (query: string) {
+  execute (query: string, timeout?: number) {
+    if (timeout) {
+      let graph = this._graph
+      let subscription = setTimeout(function() {
+        graph.close()
+      }, timeout * 1000)
+      graph.open()
+      const pipeline: any = this._builder.build(query)
+      return Pipeline.getInstance().finalize(pipeline, () => {
+        clearTimeout(subscription)
+        graph.close()
+      })
+    }
     this._graph.open()
     const pipeline: any = this._builder.build(query)
     return Pipeline.getInstance().finalize(pipeline, () => this._graph.close())

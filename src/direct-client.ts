@@ -24,11 +24,10 @@ SOFTWARE.
 
 'use strict'
 
-import { Pipeline, PipelineStage, ExecutionContext } from 'sparql-engine'
-import SageGraph from './sage-graph'
+import { Pipeline } from 'sparql-engine'
 import Spy from './spy'
-import { Parser, Algebra } from 'sparqljs'
-import utils from './utils'
+import { querySage } from './operators/sage-operators'
+import { SageRequestClient } from './sage-http-client'
 
 /**
  * A DirectSageClient is used to evaluate SPARQL queries againt a SaGe server
@@ -61,8 +60,8 @@ import utils from './utils'
 export default class DirectSageClient {
   private readonly _url: string
   private readonly _defaultGraph: string
-  private readonly _graph: SageGraph
   private readonly _spy: Spy | undefined
+  private readonly _httpClient: SageRequestClient
 
   /**
    * Constructor
@@ -72,7 +71,7 @@ export default class DirectSageClient {
     this._url = url
     this._defaultGraph = defaultGraph
     this._spy = spy
-    this._graph = new SageGraph(this._url, this._defaultGraph, this._spy)
+    this._httpClient = new SageRequestClient(this._url, this._spy)
   }
 
   /**
@@ -81,22 +80,26 @@ export default class DirectSageClient {
    * @param  query - SPARQL query to evaluate
    * @return An iterator used to evaluates the query
    */
-  execute (query: string) {
-    this._graph.open()
-    let queryPlan: Algebra.RootNode = new Parser().parse(query)
-    if (queryPlan.variables) {
-      for (let variable of queryPlan.variables) {
-        if (utils.isAggregation(variable)) {
-          throw new Error(`Aggregation are not supported`)
-        }
-      }
+  execute (query: string, timeout?: number) {
+    if (timeout) {
+      let httpClient = this._httpClient
+      let subscription = setTimeout(function() {
+        httpClient.close()
+      }, timeout * 1000)
+      httpClient.open()
+      return Pipeline.getInstance().fromAsync(input => {
+        querySage(query, this._defaultGraph, httpClient, input)
+          .then(() => {
+            clearTimeout(subscription)
+            input.complete()
+          })
+          .catch(err => input.error(err))
+      })
     }
-    for (let node of queryPlan.where) {
-      if (!(utils.isBGPNode(node) || utils.isBindNode(node) || utils.isFilterNode(node) || utils.isGroupNode(node))) {
-        throw new Error(`This operator is not supported: ${node.type}`)
-      }
-    }
-    const pipeline: any = this._graph.evalQuery(queryPlan, new ExecutionContext())
-    return Pipeline.getInstance().finalize(pipeline, () => this._graph.close())
+    return Pipeline.getInstance().fromAsync(input => {
+      querySage(query, this._defaultGraph, this._httpClient, input)
+        .then(() => input.complete())
+        .catch(err => input.error(err))
+    })
   }
 }

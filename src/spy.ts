@@ -37,6 +37,7 @@ export default class Spy {
   private _importTimes: Array<number>
   private _exportTimes: Array<number>
   private _httpErrors: Array<Error>
+  private _queryState: string
 
   constructor () {
     this._nbHttpCalls = 0
@@ -47,6 +48,7 @@ export default class Spy {
     this._importTimes = []
     this._exportTimes = []
     this._httpErrors = []
+    this._queryState = 'complete'
   }
 
   get nbHTTPCalls (): number {
@@ -81,6 +83,10 @@ export default class Spy {
     return this._responseTimes.reduce((x, y) => x + y, 0) / this._responseTimes.length
   }
 
+  get queryState (): string {
+    return this._queryState
+  }
+
   reportHTTPRequest (count = 1): void {
     this._nbHttpCalls += count
   }
@@ -111,5 +117,11 @@ export default class Spy {
 
   reportExportTime (exportTime: number): void {
     this._exportTimes.push(exportTime)
+  }
+
+  reportQueryState (state: string): void {
+    if (this._queryState !== 'error') {
+      this._queryState = state
+    }
   }
 }

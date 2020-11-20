@@ -41,7 +41,7 @@ import { Algebra, Generator } from 'sparqljs'
  * @param  streamInput  - Input of the pipeline of iterators (where results are injected)
  * @return A Promise that resolves when all query results have been fetched & processed
  */
-async function querySage (query: string, defaultGraph: string, sageClient: SageRequestClient, streamInput: StreamPipelineInput<Bindings>) {
+export async function querySage (query: string, defaultGraph: string, sageClient: SageRequestClient, streamInput: StreamPipelineInput<Bindings>) {
   let hasNext = true
   let next: string | null = null
   while (hasNext) {
