@@ -71,7 +71,7 @@ export class SageRequestClient {
     this._url = url
     this._spy = spy
     // TODO check if this really enable http multi-sockets and speed up query exec.
-    request.forever({ timeout: 1000, minSockets: 10 }, null)
+    // request.forever({ timeout: 5000, minSockets: 10 }, null)
     this._httpClient = request.defaults({
       method: 'POST',
       json: true,
@@ -165,8 +165,15 @@ export class SageRequestClient {
           attempt().then((result) => {
             resolve(result)
           }).catch((error) => {
-            counter++
-            setTimeout(sendQueryWithRetryPolicy, self._retryDelay)
+            if (error.code === 'ECONNREFUSED' || !error.code) {
+              if (self._spy) {
+                self._spy.reportQueryState('error')
+              }
+              reject(error)
+            } else {
+              counter++
+              setTimeout(sendQueryWithRetryPolicy, self._retryDelay)
+            }
           })
         }
       }
