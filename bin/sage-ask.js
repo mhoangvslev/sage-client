@@ -6,7 +6,7 @@ const fs = require('fs')
 const program = require('commander')
 const Spy = require('../dist/spy').default
 const SageClient = require('../dist/client').default
-const Parser = require('sparqljs').Parser()
+const DirectClient = require('../dist/direct-client').default
 
 // ---- MAIN ----------
 
@@ -19,6 +19,9 @@ program
   .option('-m, --measure <measure>', 'measure the query execution time (in seconds) & append it to a file')
   .option('-t, --timeout <timeout>', 'stops the query execution after the given time limit (in seconds)', 600)
   .option('-p, --print', 'prints each new result during query execution')
+  .option('--direct', 'send the whole query to the server, without going through the client')
+  .option('--mono', 'evaluate the query on the client using a mono-predicate automaton to compute property paths')
+  .option('--multi', 'evaluate the query on the client using a multi-predicate automaton to compute property paths')
   .parse(process.argv)
 
 if (program.args.length !== 2) {
@@ -37,15 +40,21 @@ if (program.query) {
     process.exit(1)
 }
 
-let queryPlan = new Parser.parse(query)
-if (queryPlan.queryType !== 'ASK') {
-    process.stderr.write('Error: you must input an ASK query.\nSee sage-ask --help for more details.\n')
-    process.exit(1)
+let options = {}
+if (program.mono) {
+    options['property-paths-automaton'] = 'mono-predicate'
+} else if (program.multi) {
+    options['property-paths-automaton'] = 'multi-predicate'
 }
 
 let solution = false
 let spy = new Spy()
-let client = new SageClient(program.args[0], program.args[1], spy)
+let client = null
+if (program.direct) {
+    client = new DirectClient(program.args[0], program.args[1], spy)
+} else {
+    client = new SageClient(program.args[0], program.args[1], spy, options=options)
+}
 
 let promise = new Promise((resolve, reject) => {
     let subscription = setTimeout(function() {
@@ -60,6 +69,9 @@ let promise = new Promise((resolve, reject) => {
     }, (error) => {
         reject(error)
     }, () => {
+        if (program.print) {
+            console.log(spy)
+        }
         clearTimeout(subscription)
         resolve()
     })

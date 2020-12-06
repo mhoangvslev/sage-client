@@ -4,11 +4,11 @@
 
 const fs = require('fs')
 const program = require('commander')
-const Parser = require('sparqljs').Parser()
 const Spy = require('../dist/spy').default
 const { format_json } = require('./format_result')
 
 const SageClient = require('../dist/client').default
+const DirectClient = require('../dist/direct-client').default
 
 // ---- MAIN ----------
 
@@ -21,12 +21,16 @@ program
   .option('-m, --measure <measure>', 'measure the query execution time (in seconds) & append it to a file')
   .option('-t, --timeout <timeout>', 'stops the query execution after the given time limit (in seconds)', 600)
   .option('-p, --print', 'prints each new result during query execution')
+  .option('--method <method>', 'Evaluates the SPARQL queries using the specified method: [mono, multi, alpha, direct]', 'direct')
   .parse(process.argv)
 
 if (program.args.length !== 2) {
     process.stderr.write('Error: you must input exactly one server and one default graph IRI to use.\nSee sage-select --help for more details.\n')
     process.exit(1)
 }
+
+let server_url = program.args[0]
+let default_graph_iri = program.args[1]
 
 // fetch SPARQL query to analyse
 let query = null
@@ -39,36 +43,59 @@ if (program.query) {
     process.exit(1)
 }
 
-let queryPlan = new Parser.parse(query)
-if (queryPlan.queryType !== 'SELECT') {
-    process.stderr.write('Error: you must input a SELECT query.\nSee sage-select --help for more details.\n')
-    process.exit(1)
+let method = program.method
+if (!['mono', 'multi', 'alpha', 'direct'].includes(method)) {
+    console.error('Error: invalid evaluation strategy. Available strategies are: [mono, multi, direct]')
+    console.error('- mono : property paths queries are evaluated using a client-side automaton-based approach with a mono-predicate automaton')
+    console.error('- multi : property paths queries are evaluated using a client-side automaton-based approach with a multi-predicate automaton')
+    console.error('- alpha : property paths queries are evaluated using a client-side alpha operator to support transitive closures')
+    console.error('- direct : property paths queries are evaluated on the server')
+}
+
+
+function get_client(spy) {
+    if (method === 'direct') {
+        return new DirectClient(server_url, default_graph_iri, spy)
+    } else if (method === 'mono') {
+        let options = {'property-paths-strategy': 'mono-predicate-automaton'}
+        return new SageClient(server_url, default_graph_iri, spy, options=options)
+    } else if (method === 'multi') {
+        let options = {'property-paths-strategy': 'multi-predicate-automaton'}
+        return new SageClient(server_url, default_graph_iri, spy, options=options)
+    } else if (method === 'alpha') {
+        let options = {'property-paths-strategy': 'alpha-operator'}
+        return new SageClient(server_url, default_graph_iri, spy, options=options)
+    }
 }
 
 let bindings = []
 let spy = new Spy()
-let client = new SageClient(program.args[0], program.args[1], spy)
+let memory = {}
+let duplicates = 0
 
 let promise = new Promise((resolve, reject) => {
-    let subscription = setTimeout(function() {
-        reject('TimeoutException')
-    }, program.timeout * 1000)
-
-    client.execute(query).subscribe(b => {
+    get_client(spy).execute(query).subscribe(b => {
         let solution = {}
         for (let mapping of b._content) {
             let variable = mapping[0]
             let value = mapping[1]
             solution[variable] = value
         }
-        bindings.push(solution)
-        if (program.print) {
-            console.log(solution)
+        if ('?imprint' in solution && solution['?imprint'] in memory) {
+            duplicates++
+        } else {
+            if ('?imprint' in solution) {
+                memory[solution['?imprint']] = true
+            }
+            bindings.push(solution)
+            if (program.print) {
+                console.log(solution)
+            }
         }
     }, (error) => {
         reject(error)
     }, () => {
-        clearTimeout(subscription)
+        console.log('complete !')
         resolve()
     })
 })
@@ -83,10 +110,10 @@ promise.then(function() {
         fs.writeFileSync(program.measure, `${time},${spy.nbHTTPCalls},${spy.transferSize},${bindings.length},complete`)
     } 
     if (program.output) {
-        fs.writeFileSync(program.output, JSON.stringify(format_json(queryPlan.variables, bindings), null, 2))
+        fs.writeFileSync(program.output, JSON.stringify(format_json(bindings), null, 2))
     }
 
-    process.stdout.write(`SPARQL query evaluated in ${time / 1000}s with ${spy.nbHTTPCalls} HTTP request(s). ${Math.round(spy.transferSize / 1024)} KBytes transfered. ${bindings.length} results !\n`)
+    process.stdout.write(`SPARQL query evaluated in ${time / 1000}s with ${spy.nbHTTPCalls} HTTP request(s). ${Math.round(spy.transferSize / 1024)} KBytes transfered. ${bindings.length} results and ${duplicates} duplicates !\n`)
     process.exit(0)
 }).catch(function(error) {
     let endTime = Date.now()
@@ -103,6 +130,6 @@ promise.then(function() {
         fs.writeFileSync(program.measure, `${time},${spy.nbHTTPCalls},${spy.transferSize},${bindings.length},${state}`)
     }
     
-    process.stdout.write(`${state === 'error' ? 'An error occured' : 'SPARQL query interrupted'} after ${time / 1000}s. ${spy.nbHTTPCalls} HTTP request(s) sent. ${Math.round(spy.transferSize / 1024)} KBytes transfered. ${bindings.length} results retrieved !\n`)
+    process.stdout.write(`${state === 'error' ? 'An error occured' : 'SPARQL query interrupted'} after ${time / 1000}s. ${spy.nbHTTPCalls} HTTP request(s) sent. ${Math.round(spy.transferSize / 1024)} KBytes transfered. ${bindings.length} results and ${duplicates} duplicates retrieved !\n`)
     process.exit(1)
 })
