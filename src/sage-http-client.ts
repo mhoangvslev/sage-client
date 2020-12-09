@@ -116,6 +116,9 @@ export class SageRequestClient {
       return new Promise((resolve, reject) => {
         let requestBody: (request.UrlOptions & request.CoreOptions) = {
           url: self._url,
+          headers: {
+            'Connection': 'keep-alive'
+          },
           body: queryBody
         }
         self._httpClient.post(requestBody, (err, res, body) => {
