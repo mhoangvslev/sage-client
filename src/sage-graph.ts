@@ -29,7 +29,7 @@ import { Bindings } from 'sparql-engine/dist/rdf/bindings'
 import ExecutionContext from 'sparql-engine/dist/engine/context/execution-context'
 import { PipelineStage, PipelineInput } from 'sparql-engine/dist/engine/pipeline/pipeline-engine'
 import { Algebra } from 'sparqljs'
-import { SageRequestClient } from './sage-http-client'
+import { SageRequestClient } from './sage-async-queue-http-client'
 import { SageBGPOperator, SageManyBGPOperator, SageQueryOperator } from './operators/sage-operators'
 import Spy from './spy'
 

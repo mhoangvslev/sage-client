@@ -27,7 +27,7 @@ SOFTWARE.
 import { Pipeline } from 'sparql-engine'
 import Spy from './spy'
 import { querySage } from './operators/sage-operators'
-import { SageRequestClient } from './sage-http-client'
+import { SageRequestClient } from './sage-async-queue-http-client'
 
 /**
  * A DirectSageClient is used to evaluate SPARQL queries againt a SaGe server

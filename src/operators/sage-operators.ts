@@ -27,7 +27,7 @@ SOFTWARE.
 import { BindingBase, Pipeline } from 'sparql-engine'
 import { Bindings } from 'sparql-engine/dist/rdf/bindings'
 import { StreamPipelineInput, PipelineStage } from 'sparql-engine/dist/engine/pipeline/pipeline-engine'
-import { SageRequestClient, SageResponseBody } from '../sage-http-client'
+import { SageRequestClient, SageResponseBody } from '../sage-async-queue-http-client'
 import { formatBGPQuery, formatManyBGPQuery, formatQuery } from './utils'
 import { Algebra, Generator } from 'sparqljs'
 

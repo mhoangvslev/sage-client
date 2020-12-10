@@ -5,7 +5,9 @@
   "main": "dist/lib.js",
   "types": "dist/lib.d.ts",
   "bin": {
-    "sage-client": "bin/sage-client.js"
+    "sage-client": "bin/sage-client.js",
+    "sage-select": "bin/sage-select.js",
+    "sage-ask": "bin/sage-ask.js"
   },
   "scripts": {
     "pretest": "tsc",
@@ -35,11 +37,18 @@
   "homepage": "https://github.com/sage-org/sage-client#readme",
   "dependencies": {
     "@babel/polyfill": "^7.4.4",
+    "@types/async": "^3.2.5",
+    "async": "^3.2.0",
+    "axios": "^0.21.0",
+    "axios-retry": "^3.1.9",
     "commander": "^2.20.0",
+    "form-data": "^3.0.0",
     "lodash": "^4.17.15",
     "request": "^2.88.0",
-    "sparql-engine": "git+https://github.com/JulienDavat/sparql-engine.git#star-rewriting-requirements",
-    "sparqljs": "^2.0.3"
+    "sparql-engine": "../sparql-engine",
+    "sparqljs": "^2.0.3",
+    "xmlhttprequest": "^1.8.0",
+    "xmlhttprequest-ts": "^1.0.1"
   },
   "devDependencies": {
     "@types/lodash": "^4.14.149",
