@@ -122,25 +122,26 @@ export class SageRequestClient {
           this._spy.reportQueryState('timeout')
         }
         resolve({bindings: [], hasNext: false, next: null})
+      } else {
+        this._httpClient.post(this._url, queryBody).then((result) => {
+          let body = result.data as SageResponseBody
+          if (this._spy) {
+            this._spy.reportHTTPRequest()
+            this._spy.reportSolution(body.bindings.length)
+            this._spy.reportHTTPTransferSize(Buffer.byteLength(JSON.stringify(body), 'utf8'))
+            this._spy.reportImportTime(body.stats.import)
+            this._spy.reportExportTime(body.stats.export)
+            this._spy.reportOverhead(body.stats.import + body.stats.export)
+          }
+          resolve(body)
+        }).catch((error) => {
+          if (this._spy) {
+            this._spy.reportQueryState('error')
+            this._spy.reportHTTPError(error)
+          }
+          reject(error)
+        })
       }
-      this._httpClient.post(this._url, queryBody).then((result) => {
-        let body = result.data as SageResponseBody
-        if (this._spy) {
-          this._spy.reportHTTPRequest()
-          this._spy.reportSolution(body.bindings.length)
-          this._spy.reportHTTPTransferSize(Buffer.byteLength(JSON.stringify(body), 'utf8'))
-          this._spy.reportImportTime(body.stats.import)
-          this._spy.reportExportTime(body.stats.export)
-          this._spy.reportOverhead(body.stats.import + body.stats.export)
-        }
-        resolve(body)
-      }).catch((error) => {
-        if (this._spy) {
-          this._spy.reportQueryState('error')
-          this._spy.reportHTTPError(error)
-        }
-        reject(error)
-      })
     })
   }
 
