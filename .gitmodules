@@ -1,0 +1,3 @@
+[submodule "submodules/sparql-engine"]
+	path = submodules/sparql-engine
+	url = https://github.com/JulienDavat/sparql-engine.git

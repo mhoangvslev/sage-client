@@ -24,11 +24,10 @@ SOFTWARE.
 
 'use strict'
 
-const axiosRetry = require('axios-retry')
+import axiosRetry from 'axios-retry'
 
 import Spy from './spy'
-import axios from 'axios'
-import { AxiosInstance } from 'axios'
+import axios, { AxiosInstance } from 'axios'
 import * as async from 'async'
 
 /**
@@ -76,16 +75,16 @@ export class SageRequestClient {
     this._httpClient = axios.create({
       url: url,
       method: 'post',
-      headers: {'ContentType': 'application/json'}
+      headers: { 'ContentType': 'application/json' }
     })
     // Setup the retry policy
     let self = this
-    axiosRetry(this._httpClient, { retries: 1000, retryDelay: function(count: number, error: any) {
+    axiosRetry(this._httpClient, { retries: 1000, retryDelay: function (count: number, error: any) {
       console.log(`Network error: retry n°${count}`)
       return axiosRetry.exponentialDelay(count % 10)
     }})
     // Setup the waiting list
-    this._queue = async.queue(async function(task: SageQueryBody, callback: async.AsyncResultCallback<SageResponseBody, Error>) {
+    this._queue = async.queue(async function (task: SageQueryBody, callback: async.AsyncResultCallback<SageResponseBody, Error>) {
       try {
         let response: SageResponseBody = await self.execute(task)
         callback(null, response)
@@ -115,13 +114,13 @@ export class SageRequestClient {
    * @param queryBody - The body of an HTTP query to evaluate a SPARQL query
    * @return The HTTP response as sent by the SaGe server
    */
-  private execute(queryBody: SageQueryBody): Promise<SageResponseBody> {   
+  private execute (queryBody: SageQueryBody): Promise<SageResponseBody> {
     return new Promise((resolve, reject) => {
       if (this._isClosed) {
         if (this._spy) {
           this._spy.reportQueryState('timeout')
         }
-        resolve({bindings: [], hasNext: false, next: null})
+        resolve({ bindings: [], hasNext: false, next: null })
       } else {
         this._httpClient.post(this._url, queryBody).then((result) => {
           let body = result.data as SageResponseBody
@@ -163,9 +162,9 @@ export class SageRequestClient {
         if (this._spy) {
           this._spy.reportQueryState('timeout')
         }
-        resolve({bindings: [], hasNext: false, next: null})
+        resolve({ bindings: [], hasNext: false, next: null })
       } else {
-        this._queue.push(queryBody, function(error?: Error | null, result?: SageResponseBody) {
+        this._queue.push(queryBody, function (error?: Error | null, result?: SageResponseBody) {
           if (result) {
             resolve(result)
           } else {

@@ -24,9 +24,7 @@ SOFTWARE.
 
 'use strict'
 
-import { BindingBase, Pipeline } from 'sparql-engine'
-import { Bindings } from 'sparql-engine/dist/rdf/bindings'
-import { StreamPipelineInput, PipelineStage } from 'sparql-engine/dist/engine/pipeline/pipeline-engine'
+import { BindingBase, Pipeline, Bindings, StreamPipelineInput, PipelineStage } from 'sparql-engine'
 import { SageRequestClient, SageResponseBody } from '../sage-async-queue-http-client'
 import { formatBGPQuery, formatManyBGPQuery, formatQuery } from './utils'
 import { Algebra, Generator } from 'sparqljs'
@@ -70,7 +68,7 @@ export async function querySage (query: string, defaultGraph: string, sageClient
 export function SageBGPOperator (bgp: Algebra.TripleObject[], defaultGraph: string, sageClient: SageRequestClient): PipelineStage<Bindings> {
   const generator = new Generator()
   const query = formatBGPQuery(generator, bgp)
-  return Pipeline.getInstance().fromAsync(input => {
+  return Pipeline.getInstance().fromAsync((input: StreamPipelineInput<Bindings>) => {
     querySage(query, defaultGraph, sageClient, input)
       .then(() => input.complete())
       .catch(err => input.error(err))
@@ -87,7 +85,7 @@ export function SageBGPOperator (bgp: Algebra.TripleObject[], defaultGraph: stri
 export function SageManyBGPOperator (bgps: Array<Algebra.TripleObject[]>, defaultGraph: string, sageClient: SageRequestClient): PipelineStage<Bindings> {
   const generator = new Generator()
   const query = formatManyBGPQuery(generator, bgps)
-  return Pipeline.getInstance().fromAsync(input => {
+  return Pipeline.getInstance().fromAsync((input: StreamPipelineInput<Bindings>) => {
     querySage(query, defaultGraph, sageClient, input)
       .then(() => input.complete())
       .catch(err => input.error(err))
@@ -95,7 +93,7 @@ export function SageManyBGPOperator (bgps: Array<Algebra.TripleObject[]>, defaul
 }
 
 /**
- * An operator used to evaluate a SPARQL query. 
+ * An operator used to evaluate a SPARQL query.
  * Wearning: Only BGP, Filter and Bind nodes are supported by a SaGe server.
  * @author Julien AIMONIER-DAVAT
  * @param root - Root node of a SPARQL query plan
@@ -105,7 +103,7 @@ export function SageManyBGPOperator (bgps: Array<Algebra.TripleObject[]>, defaul
 export function SageQueryOperator (root: Algebra.RootNode, defaultGraph: string, sageClient: SageRequestClient): PipelineStage<Bindings> {
   const generator = new Generator()
   const query = formatQuery(generator, root)
-  return Pipeline.getInstance().fromAsync(input => {
+  return Pipeline.getInstance().fromAsync((input: StreamPipelineInput<Bindings>) => {
     querySage(query, defaultGraph, sageClient, input)
       .then(() => input.complete())
       .catch(err => input.error(err))

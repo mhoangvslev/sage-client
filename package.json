@@ -44,8 +44,9 @@
     "commander": "^2.20.0",
     "form-data": "^3.0.0",
     "lodash": "^4.17.15",
+    "rdf-js": "^4.0.2",
     "request": "^2.88.0",
-    "sparql-engine": "../sparql-engine",
+    "sparql-engine": "file:submodules/sparql-engine",
     "sparqljs": "^2.0.3",
     "xmlhttprequest": "^1.8.0",
     "xmlhttprequest-ts": "^1.0.1"

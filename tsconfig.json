@@ -9,6 +9,7 @@
     "allowSyntheticDefaultImports": true,
     "suppressImplicitAnyIndexErrors": true,
     "downlevelIteration": true,
+    "moduleResolution": "node",
     "typeRoots": [
       "./node_modules/@types/",
       "./types/"

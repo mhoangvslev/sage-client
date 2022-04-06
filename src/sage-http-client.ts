@@ -111,8 +111,8 @@ export class SageRequestClient {
       defaultGraph,
       next
     }
-    
-    function attempt(): Promise<SageResponseBody> {
+
+    function attempt (): Promise<SageResponseBody> {
       return new Promise((resolve, reject) => {
         let requestBody: (request.UrlOptions & request.CoreOptions) = {
           url: self._url,
@@ -153,7 +153,7 @@ export class SageRequestClient {
 
     return new Promise((resolve, reject) => {
       let counter = 1
-      const sendQueryWithRetryPolicy = function() {
+      const sendQueryWithRetryPolicy = function () {
         if (self._isClosed) {
           if (self._spy) {
             self._spy.reportQueryState('timeout')
@@ -180,7 +180,7 @@ export class SageRequestClient {
           })
         }
       }
-      sendQueryWithRetryPolicy()      
+      sendQueryWithRetryPolicy()
     })
   }
 }

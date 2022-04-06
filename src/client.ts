@@ -71,7 +71,7 @@ export default class SageClient {
     this._graph = new SageGraph(this._url, this._defaultGraph, this._spy)
     this._dataset = new HashMapDataset(this._defaultGraph, this._graph)
     // set graph factory to create SageGraph on demand
-    this._dataset.setGraphFactory(iri => {
+    this._dataset.setGraphFactory((iri: string) => {
       if (!iri.startsWith('http')) {
         throw new Error(`Invalid URL in SERVICE clause: ${iri}`)
       }
@@ -93,7 +93,7 @@ export default class SageClient {
   execute (query: string, timeout?: number) {
     if (timeout) {
       let graph = this._graph
-      let subscription = setTimeout(function() {
+      let subscription = setTimeout(function () {
         graph.close()
       }, timeout * 1000)
       graph.open()

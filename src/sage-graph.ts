@@ -24,10 +24,7 @@ SOFTWARE.
 
 'use strict'
 
-import { Graph, Pipeline } from 'sparql-engine'
-import { Bindings } from 'sparql-engine/dist/rdf/bindings'
-import ExecutionContext from 'sparql-engine/dist/engine/context/execution-context'
-import { PipelineStage, PipelineInput } from 'sparql-engine/dist/engine/pipeline/pipeline-engine'
+import { Graph, Pipeline, Bindings, ExecutionContext, PipelineStage, PipelineInput } from 'sparql-engine'
 import { Algebra } from 'sparqljs'
 import { SageRequestClient } from './sage-async-queue-http-client'
 import { SageBGPOperator, SageManyBGPOperator, SageQueryOperator } from './operators/sage-operators'
@@ -55,7 +52,7 @@ export default class SageGraph extends Graph {
 
   find (triple: Algebra.TripleObject, context: ExecutionContext): PipelineInput<Algebra.TripleObject> {
     const input = this.evalBGP([triple], context)
-    return Pipeline.getInstance().map(input, bindings => {
+    return Pipeline.getInstance().map(input, (bindings: Bindings) => {
       return bindings.bound(triple)
     })
   }

@@ -24,7 +24,7 @@ SOFTWARE.
 
 'use strict'
 
-import { Pipeline } from 'sparql-engine'
+import { Bindings, Pipeline, StreamPipelineInput } from 'sparql-engine'
 import Spy from './spy'
 import { querySage } from './operators/sage-operators'
 import { SageRequestClient } from './sage-async-queue-http-client'
@@ -32,9 +32,9 @@ import { SageRequestClient } from './sage-async-queue-http-client'
 /**
  * A DirectSageClient is used to evaluate SPARQL queries againt a SaGe server
  * without using the smart client
- * 
+ *
  * WEARNING: Only mapping-at-a-time operators are allowed (AND, FILTER, BIND, UNION, SELECT)
- * 
+ *
  * @author Julien AIMONIER-DAVAT
  * @example
  * 'use strict'
@@ -83,11 +83,11 @@ export default class DirectSageClient {
   execute (query: string, timeout?: number) {
     if (timeout) {
       let httpClient = this._httpClient
-      let subscription = setTimeout(function() {
+      let subscription = setTimeout(function () {
         httpClient.close()
       }, timeout * 1000)
       httpClient.open()
-      return Pipeline.getInstance().fromAsync(input => {
+      return Pipeline.getInstance().fromAsync((input: StreamPipelineInput<Bindings>) => {
         querySage(query, this._defaultGraph, httpClient, input)
           .then(() => {
             clearTimeout(subscription)
@@ -96,7 +96,7 @@ export default class DirectSageClient {
           .catch(err => input.error(err))
       })
     }
-    return Pipeline.getInstance().fromAsync(input => {
+    return Pipeline.getInstance().fromAsync((input: StreamPipelineInput<Bindings>) => {
       querySage(query, this._defaultGraph, this._httpClient, input)
         .then(() => input.complete())
         .catch(err => input.error(err))

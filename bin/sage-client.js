@@ -48,6 +48,7 @@ program
   .usage('<server-url> <default-graph-iri> [options]')
   .option('-q, --query <query>', 'evaluates the given SPARQL query')
   .option('-f, --file <file>', 'evaluates the SPARQL query stored in the given file')
+  .option('-F, --format <format>', 'export format for the result.')
   // .option('-t, --type <mime-type>', 'determines the MIME type of the output (e.g., application/json)', 'application/json')
   .parse(process.argv)
 
@@ -75,8 +76,13 @@ if (program.query) {
 const client = new SageClient(server, defaultGraph, spy)
 
 const startTime = Date.now()
+var results = []
 client.execute(query).subscribe(b => {
-  console.log(b.toObject())
+  if (program.format === 'json'){
+    results.push(b.toObject())
+  } else {
+    console.log(b.toObject())
+  }
 }, (error) => {
   console.error('ERROR: An error occurred during query execution.')
   console.error(error.stack)
@@ -84,4 +90,5 @@ client.execute(query).subscribe(b => {
   const endTime = Date.now()
   const time = endTime - startTime
   console.log(`SPARQL query evaluated in ${time / 1000}s with ${spy.nbHTTPCalls} HTTP request(s)`)
+  console.log(JSON.stringify(results, null, 4))
 })
