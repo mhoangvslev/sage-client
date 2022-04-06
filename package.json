@@ -12,7 +12,7 @@
   "scripts": {
     "pretest": "tsc",
     "test": "mocha tests/**/*-test.js",
-    "build": "webpack",
+    "build": "webpack && cp wdist/sage-client.bundle.js dist/",
     "lint": "tslint -c ./tslint.json --fix src/*.ts src/**/*.ts",
     "build-ts": "tsc"
   },
